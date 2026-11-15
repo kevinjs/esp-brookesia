@@ -7,6 +7,21 @@ idf_component_register(
     EMBED_TXTFILES ${EMBEDDED_FILES}
 )
 
+# Stage the user-provided XiaoZhi runtime app package (built with
+# esp-brookesia-toolkit) into the littlefs_data image so it is installed at boot.
+set(XIAOZHI_APP_PACKAGE_DIR
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../../example/xiaozhi-ui/build"
+    CACHE PATH "XiaoZhi runtime app package directory")
+if(COMMAND brookesia_stage_runtime_app_package AND EXISTS "${XIAOZHI_APP_PACKAGE_DIR}/manifest.json")
+    brookesia_stage_runtime_app_package(
+        PACKAGE_ID esp.brookesia.app.xiaozhi
+        SOURCE_DIR "${XIAOZHI_APP_PACKAGE_DIR}"
+        STAGE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../littlefs/apps"
+    )
+else()
+    message(WARNING "XiaoZhi app package not found at ${XIAOZHI_APP_PACKAGE_DIR}; skipping")
+endif()
+
 get_property(brookesia_runtime_app_stage_targets GLOBAL PROPERTY BROOKESIA_RUNTIME_APP_STAGE_TARGETS)
 if(brookesia_runtime_app_stage_targets)
     list(REMOVE_DUPLICATES brookesia_runtime_app_stage_targets)
