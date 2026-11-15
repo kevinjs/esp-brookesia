@@ -58,6 +58,9 @@ std::expected<void, std::string> ShellApp::mount_overlay(core::AppContext &conte
     subscribe_sntp_events();
     (void)configure_display_gesture();
     apply_debug_config(get_debug_config_snapshot());
+    if (auto result = apply_i18n_updates(); !result) {
+        BROOKESIA_LOGW("Failed to apply Shell i18n updates after overlay mount: %1%", result.error());
+    }
     return refresh_system_ui_bindings();
 }
 
