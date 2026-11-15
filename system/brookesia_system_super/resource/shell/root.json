@@ -44,6 +44,12 @@
             ]
         },
         {
+            "when": "${expr(${env.widthDp} == 466dp && ${env.heightDp} == 466dp)}",
+            "assets": [
+                "constants/466x466.json"
+            ]
+        },
+        {
             "when": "${expr(${env.widthDp} < ${env.heightDp})}",
             "assets": [
                 "constants/portrait.json"

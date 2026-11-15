@@ -155,7 +155,13 @@ private:
     bool ensure_wifi_service_binding();
     void release_wifi_service_binding();
     void refresh_wifi_status();
-    void set_status_wifi_state(bool visible, bool connected);
+    void set_status_wifi_state(bool connected);
+    bool ensure_device_service_binding();
+    void release_device_service_binding();
+    void subscribe_device_events();
+    void disconnect_device_events();
+    void refresh_battery_status();
+    void set_status_battery_state(bool present, std::optional<int32_t> percentage, bool charging);
     bool ensure_sntp_service_binding();
     void release_sntp_service_binding();
     void subscribe_sntp_events();
@@ -184,9 +190,11 @@ private:
     std::shared_ptr<service::dataflow::VisualOperation> display_operation_;
     service::ServiceBinding display_service_binding_;
     service::ServiceBinding wifi_service_binding_;
+    service::ServiceBinding device_service_binding_;
     service::ServiceBinding sntp_service_binding_;
     std::vector<lib_utils::connection> display_gesture_connections_;
     service::EventRegistry::SignalConnection wifi_event_connection_;
+    service::EventRegistry::SignalConnection device_event_connection_;
     service::EventRegistry::SignalConnection sntp_event_connection_;
     bool background_mounted_ = false;
     bool overlay_mounted_ = false;
@@ -204,6 +212,7 @@ private:
     uint64_t gesture_generation_ = 0;
     uint64_t status_peek_generation_ = 0;
     uint64_t wifi_status_generation_ = 0;
+    uint64_t battery_status_generation_ = 0;
     bool gesture_tracking_ = false;
     bool gesture_exit_armed_ = false;
     bool gesture_exit_triggered_ = false;

@@ -8,15 +8,19 @@
 #   define BROOKESIA_LOG_DISABLE_DEBUG_TRACE 1
 #endif
 
+#include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "boost/json.hpp"
 #include "brookesia/lib_utils/describe_helpers.hpp"
 #include "brookesia/service_helper/network/sntp.hpp"
 #include "brookesia/service_helper/network/wifi.hpp"
+#include "brookesia/service_helper/system/device.hpp"
 #include "private/shell_app.hpp"
 #include "private/system_constants.hpp"
 #include "private/utils.hpp"
@@ -26,6 +30,7 @@ namespace {
 
 using SNTPHelper = service::helper::SNTP;
 using WifiHelper = service::helper::Wifi;
+using DeviceHelper = service::helper::Device;
 
 struct WifiStatusState {
     bool visible = false;
@@ -100,25 +105,25 @@ bool ShellApp::ensure_wifi_service_binding()
             return true;
         }
         ++wifi_status_generation_;
-        set_status_wifi_state(false, false);
+        set_status_wifi_state(false);
         return false;
     }
     if (!WifiHelper::is_available()) {
         ++wifi_status_generation_;
-        set_status_wifi_state(false, false);
+        set_status_wifi_state(false);
         return false;
     }
     wifi_service_binding_ = service::ServiceManager::get_instance().bind(WifiHelper::get_name().data());
     if (!wifi_service_binding_.is_valid()) {
         BROOKESIA_LOGW("Failed to bind Wi-Fi service for Shell status");
         ++wifi_status_generation_;
-        set_status_wifi_state(false, false);
+        set_status_wifi_state(false);
         return false;
     }
     if (!WifiHelper::is_running()) {
         ++wifi_status_generation_;
         wifi_service_binding_.release();
-        set_status_wifi_state(false, false);
+        set_status_wifi_state(false);
         return false;
     }
 
@@ -129,7 +134,7 @@ bool ShellApp::ensure_wifi_service_binding()
             }
             ++wifi_status_generation_;
             const auto status = get_wifi_status_from_event(event);
-            set_status_wifi_state(status.visible, status.connected);
+            set_status_wifi_state(status.connected);
         };
         wifi_event_connection_ = WifiHelper::subscribe_event(
                                      WifiHelper::EventId::GeneralEventHappened,
@@ -148,7 +153,7 @@ void ShellApp::release_wifi_service_binding()
     wifi_event_connection_.disconnect();
     wifi_service_binding_.release();
     wifi_connected_ = false;
-    set_status_wifi_state(false, false);
+    set_status_wifi_state(false);
 }
 
 void ShellApp::refresh_wifi_status()
@@ -163,20 +168,20 @@ void ShellApp::refresh_wifi_status()
             return;
         }
         if (!result.success || !result.has_data()) {
-            set_status_wifi_state(true, false);
+            set_status_wifi_state(false);
             return;
         }
         const auto &state = result.get_data<std::string>();
         const auto status = get_wifi_status_from_state(state);
-        set_status_wifi_state(status.visible, status.connected);
+        set_status_wifi_state(status.connected);
     };
     if (!WifiHelper::call_function_async(WifiHelper::FunctionId::GetGeneralState, state_handler)) {
         BROOKESIA_LOGW("Failed to submit Wi-Fi state request for Shell status");
-        set_status_wifi_state(true, false);
+        set_status_wifi_state(false);
     }
 }
 
-void ShellApp::set_status_wifi_state(bool visible, bool connected)
+void ShellApp::set_status_wifi_state(bool connected)
 {
     wifi_connected_ = connected;
     if (context_ == nullptr) {
@@ -186,21 +191,153 @@ void ShellApp::set_status_wifi_state(bool visible, bool connected)
     updates.push_back(gui::BindingValueUpdate{
         .absolute_path = SUPER_STATUS_WIFI_PATH,
         .key = "wifi_hidden",
-        .value = bool_to_binding(!visible),
+        .value = bool_to_binding(false),
     });
     updates.push_back(gui::BindingValueUpdate{
         .absolute_path = SUPER_STATUS_WIFI_PATH,
-        .key = "wifi_bg",
-        .value = connected ? "${color.success.fill}" : "${color.border.strong}",
-    });
-    updates.push_back(gui::BindingValueUpdate{
-        .absolute_path = std::string(SUPER_STATUS_WIFI_PATH) + "/label",
-        .key = "wifi_text",
-        .value = connected ? "${color.success.on}" : "${color.text.inverse}",
+        .key = "wifi_icon",
+        .value = std::string(connected ? SUPER_STATUS_WIFI_ICON_CONNECTED : SUPER_STATUS_WIFI_ICON_DISCONNECTED),
     });
     auto result = context_->gui().set_binding_values(updates);
     if (!result) {
         BROOKESIA_LOGW("Failed to refresh Shell Wi-Fi status icon: %1%", result.error());
+    }
+}
+
+bool ShellApp::ensure_device_service_binding()
+{
+    if (device_service_binding_.is_valid()) {
+        return true;
+    }
+    if (!DeviceHelper::is_available()) {
+        BROOKESIA_LOGD("Device service is not available for Shell status battery");
+        return false;
+    }
+    device_service_binding_ = service::ServiceManager::get_instance().bind(DeviceHelper::get_name().data());
+    if (!device_service_binding_.is_valid()) {
+        BROOKESIA_LOGW("Failed to bind Device service for Shell status battery");
+        return false;
+    }
+    return true;
+}
+
+void ShellApp::disconnect_device_events()
+{
+    device_event_connection_.disconnect();
+}
+
+void ShellApp::subscribe_device_events()
+{
+    disconnect_device_events();
+    if (!ensure_device_service_binding()) {
+        return;
+    }
+    const auto callback = [this](const std::string &, const service::EventItemMap &) {
+        refresh_battery_status();
+    };
+    device_event_connection_ =
+        DeviceHelper::subscribe_event(DeviceHelper::EventId::PowerBatteryStateChanged, callback);
+    if (!device_event_connection_.connected()) {
+        BROOKESIA_LOGW("Failed to subscribe Device battery state event for Shell status");
+    }
+}
+
+void ShellApp::release_device_service_binding()
+{
+    ++battery_status_generation_;
+    disconnect_device_events();
+    device_service_binding_.release();
+    set_status_battery_state(false, std::nullopt, false);
+}
+
+void ShellApp::refresh_battery_status()
+{
+    if (!ensure_device_service_binding()) {
+        set_status_battery_state(false, std::nullopt, false);
+        return;
+    }
+    const auto generation = ++battery_status_generation_;
+    const auto state_handler = [this, generation](service::FunctionResult &&result) {
+        if (context_ == nullptr || generation != battery_status_generation_) {
+            return;
+        }
+        if (!result.success || !result.has_data()) {
+            set_status_battery_state(false, std::nullopt, false);
+            return;
+        }
+
+        const auto &state = result.get_data<boost::json::object>();
+        bool present = false;
+        std::optional<int32_t> percentage;
+        bool charging = false;
+
+        if (const auto *value = state.if_contains("is_present"); value != nullptr && value->is_bool()) {
+            present = value->as_bool();
+        }
+        if (const auto *value = state.if_contains("percentage"); value != nullptr) {
+            if (value->is_int64()) {
+                percentage = static_cast<int32_t>(value->as_int64());
+            } else if (value->is_uint64()) {
+                percentage = static_cast<int32_t>(value->as_uint64());
+            }
+        }
+        if (const auto *value = state.if_contains("charge_state"); value != nullptr && value->is_string()) {
+            const std::string charge_state(value->as_string().data(), value->as_string().size());
+            charging = (charge_state == "Charging") || (charge_state == "Trickle") ||
+                       (charge_state == "PreCharge") || (charge_state == "ConstantCurrent") ||
+                       (charge_state == "ConstantVoltage");
+        }
+        set_status_battery_state(present, percentage, charging);
+    };
+    if (!DeviceHelper::call_function_async(DeviceHelper::FunctionId::GetPowerBatteryState, state_handler)) {
+        BROOKESIA_LOGW("Failed to submit battery state request for Shell status");
+        set_status_battery_state(false, std::nullopt, false);
+    }
+}
+
+void ShellApp::set_status_battery_state(bool present, std::optional<int32_t> percentage, bool charging)
+{
+    if (context_ == nullptr) {
+        return;
+    }
+
+    const bool available = present && percentage.has_value();
+    std::vector<gui::BindingValueUpdate> updates;
+    updates.push_back(gui::BindingValueUpdate{
+        .absolute_path = SUPER_STATUS_BATTERY_PATH,
+        .key = "battery_hidden",
+        .value = bool_to_binding(false),
+    });
+
+    std::string background = "${color.border.strong}";
+    std::string text_color = "${color.text.inverse}";
+    std::string text = "--%";
+    if (available) {
+        const auto percent = static_cast<int32_t>(std::clamp<int32_t>(*percentage, 0, 100));
+        background = charging ? "${color.warning.fill}" : "${color.success.fill}";
+        text_color = charging ? "${color.warning.on}" : "${color.success.on}";
+        text = std::to_string(percent) + "%";
+    }
+
+    updates.push_back(gui::BindingValueUpdate{
+        .absolute_path = SUPER_STATUS_BATTERY_PATH,
+        .key = "battery_bg",
+        .value = std::move(background),
+    });
+    updates.push_back(gui::BindingValueUpdate{
+        .absolute_path = SUPER_STATUS_BATTERY_LABEL_PATH,
+        .key = "battery_text",
+        .value = std::move(text),
+    });
+    updates.push_back(gui::BindingValueUpdate{
+        .absolute_path = SUPER_STATUS_BATTERY_LABEL_PATH,
+        .key = "battery_text_color",
+        .value = std::move(text_color),
+    });
+
+    auto result = context_->gui().set_binding_values(updates);
+    if (!result) {
+        BROOKESIA_LOGW("Failed to refresh Shell battery status icon: %1%", result.error());
     }
 }
 

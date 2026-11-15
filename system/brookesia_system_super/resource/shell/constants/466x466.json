@@ -1,0 +1,16 @@
+{
+    "type": "constant",
+    "data": {
+        "ui": {
+            "content": {
+                "metric": {
+                    "x": "40dp",
+                    "y": "88dp",
+                    "width": "${expr(${env.widthDp} - 80dp)}",
+                    "height": "${expr(${env.heightDp} - 112dp)}",
+                    "launcherGridTop": "4dp"
+                }
+            }
+        }
+    }
+}

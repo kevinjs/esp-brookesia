@@ -1,5 +1,3 @@
 {
-    "updates": [
-        {"path": "/overlay/status/status_right/wifi_pill/label", "key": "labelProps.text", "value": "WiFi"}
-    ]
+    "updates": []
 }

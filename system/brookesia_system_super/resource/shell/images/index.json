@@ -72,6 +72,18 @@
             "src": "icon/space.png",
             "width": 32,
             "height": 32
+        },
+        {
+            "id": "icon.wifi",
+            "src": "icon/wifi.png",
+            "width": 32,
+            "height": 32
+        },
+        {
+            "id": "icon.wifiOff",
+            "src": "icon/wifi_off.png",
+            "width": 32,
+            "height": 32
         }
     ]
 }

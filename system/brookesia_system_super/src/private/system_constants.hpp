@@ -90,10 +90,17 @@ inline constexpr const char *SUPER_MESSAGE_DIALOG_SCREEN_PATH = BROOKESIA_SYSTEM
 
 inline constexpr const char *SUPER_STATUS_BAR_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY_STATUS;
 inline constexpr const char *SUPER_SYSTEM_UI_MASK_PATH = BROOKESIA_SYSTEM_SUPER_PATH_SYSTEM_UI_MASK;
-inline constexpr const char *SUPER_STATUS_WIFI_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY_STATUS
-        "/status_right/wifi_pill";
-inline constexpr const char *SUPER_STATUS_CLOCK_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY_STATUS
-        "/status_right/clock/label";
+inline constexpr const char *SUPER_STATUS_RING_PATH = BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY "/status_ring";
+inline constexpr const char *SUPER_STATUS_WIFI_PATH =
+    BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY "/status_ring/status_row/wifi";
+inline constexpr const char *SUPER_STATUS_BATTERY_PATH =
+    BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY "/status_ring/status_row/battery";
+inline constexpr const char *SUPER_STATUS_BATTERY_LABEL_PATH =
+    BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY "/status_ring/status_row/battery/label";
+inline constexpr const char *SUPER_STATUS_CLOCK_PATH =
+    BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY "/status_ring/status_row/clock/label";
+inline constexpr const char *SUPER_STATUS_WIFI_ICON_CONNECTED = "icon.wifi";
+inline constexpr const char *SUPER_STATUS_WIFI_ICON_DISCONNECTED = "icon.wifiOff";
 inline constexpr const char *SUPER_GESTURE_INDICATOR_PATH =
     BROOKESIA_SYSTEM_SUPER_PATH_OVERLAY "/gesture_indicator";
 inline constexpr const char *SUPER_GESTURE_INDICATOR_BAR_PATH =

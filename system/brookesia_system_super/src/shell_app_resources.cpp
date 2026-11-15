@@ -275,6 +275,11 @@ std::expected<void, std::string> ShellApp::apply_i18n_updates()
         }
     }
 
+    if (updates->empty()) {
+        applied_i18n_locale_ = locale;
+        return {};
+    }
+
     auto result = context_->gui().set_binding_values(*updates);
     if (!result) {
         return result;

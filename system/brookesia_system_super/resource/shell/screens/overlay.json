@@ -74,68 +74,70 @@
             "bindings": {
                 "placement.y": "system_ui_status_y"
             },
+            "children": [],
+            "styleRefs": [
+                "shell.statusBar"
+            ]
+        },
+        {
+            "type": "container",
+            "id": "status_ring",
+            "commonProps": {
+                "clickable": false,
+                "scrollable": false
+            },
+            "placement": {
+                "mode": "absolute",
+                "x": 0,
+                "y": 0,
+                "width": "${env.widthDp}",
+                "height": "${env.heightDp}"
+            },
+            "style": {
+                "padding": 0
+            },
             "children": [
                 {
                     "type": "container",
-                    "id": "status_right",
+                    "id": "status_row",
+                    "commonProps": {
+                        "clickable": false
+                    },
                     "layout": {
                         "type": "flex",
                         "flexFlow": "row",
-                        "mainAlign": "end",
+                        "mainAlign": "center",
                         "crossAlign": "center",
-                        "gap": "${constant.ui.overlay.metric.statusItemGap}"
+                        "gap": "${constant.ui.overlay.metric.ringRowGap}"
                     },
                     "placement": {
-                        "mode": "flow",
-                        "width": "match",
-                        "height": "${constant.ui.overlay.metric.statusPillHeight}"
+                        "mode": "absolute",
+                        "x": 0,
+                        "y": "${expr(${env.heightDp} / 16)}",
+                        "width": "${env.widthDp}",
+                        "height": "${constant.ui.overlay.metric.ringRowHeight}"
                     },
                     "children": [
                         {
-                            "type": "container",
-                            "id": "wifi_pill",
+                            "type": "image",
+                            "id": "wifi",
                             "commonProps": {
-                                "hidden": true
+                                "clickable": false,
+                                "hidden": false
                             },
                             "bindings": {
                                 "commonProps.hidden": "wifi_hidden",
-                                "style.bgColor": "wifi_bg"
+                                "imageProps.src": "wifi_icon"
                             },
-                            "layout": {
-                                "type": "flex",
-                                "mainAlign": "center",
-                                "crossAlign": "center"
+                            "imageProps": {
+                                "src": "${image.icon.wifiOff}",
+                                "innerAlign": "contain"
                             },
                             "placement": {
                                 "mode": "flow",
-                                "width": "${constant.ui.overlay.metric.statusPillWidth}",
-                                "height": "${constant.ui.overlay.metric.statusPillHeight}"
-                            },
-                            "children": [
-                                {
-                                    "type": "label",
-                                    "id": "label",
-                                    "bindings": {
-                                        "labelProps.text": "labelProps.text",
-                                        "style.textColor": "wifi_text"
-                                    },
-                                "labelProps": {
-                                    "text": "${constant.i18n.overlay.wifi}"
-                                },
-                                "style": {
-                                    "fontSize": "${constant.ui.overlay.metric.statusPillFont}"
-                                },
-                                "placement": {
-                                    "mode": "flow"
-                                },
-                                "styleRefs": [
-                                    "shell.pillText"
-                                    ]
-                                }
-                            ],
-                            "styleRefs": [
-                                "shell.statusPill"
-                            ]
+                                "width": "${constant.ui.overlay.metric.ringWifiSize}",
+                                "height": "${constant.ui.overlay.metric.ringWifiSize}"
+                            }
                         },
                         {
                             "type": "container",
@@ -150,8 +152,8 @@
                             },
                             "placement": {
                                 "mode": "flow",
-                                "width": "${constant.ui.overlay.metric.statusClockWidth}",
-                                "height": "${constant.ui.overlay.metric.statusPillHeight}"
+                                "width": "${constant.ui.overlay.metric.ringClockWidth}",
+                                "height": "${constant.ui.overlay.metric.ringClockHeight}"
                             },
                             "children": [
                                 {
@@ -164,7 +166,8 @@
                                         "labelProps.text": "clock_text"
                                     },
                                     "style": {
-                                        "fontSize": "${constant.ui.overlay.metric.statusClockFont}"
+                                        "fontSize": "${constant.ui.overlay.metric.ringClockFont}",
+                                        "textColor": "${color.text.default}"
                                     },
                                     "placement": {
                                         "mode": "flow"
@@ -174,12 +177,60 @@
                                     ]
                                 }
                             ]
+                        },
+                        {
+                            "type": "container",
+                            "id": "battery",
+                            "commonProps": {
+                                "clickable": false,
+                                "hidden": false
+                            },
+                            "bindings": {
+                                "commonProps.hidden": "battery_hidden",
+                                "style.bgColor": "battery_bg"
+                            },
+                            "layout": {
+                                "type": "flex",
+                                "mainAlign": "center",
+                                "crossAlign": "center"
+                            },
+                            "placement": {
+                                "mode": "flow",
+                                "width": "${constant.ui.overlay.metric.ringBatteryWidth}",
+                                "height": "${constant.ui.overlay.metric.ringBatteryHeight}"
+                            },
+                            "style": {
+                                "bgColor": "${color.border.strong}"
+                            },
+                            "children": [
+                                {
+                                    "type": "label",
+                                    "id": "label",
+                                    "bindings": {
+                                        "labelProps.text": "battery_text",
+                                        "style.textColor": "battery_text_color"
+                                    },
+                                    "labelProps": {
+                                        "text": "--%"
+                                    },
+                                    "style": {
+                                        "fontSize": "${constant.ui.overlay.metric.ringBatteryFont}",
+                                        "textColor": "${color.text.inverse}"
+                                    },
+                                    "placement": {
+                                        "mode": "flow"
+                                    },
+                                    "styleRefs": [
+                                        "shell.pillText"
+                                    ]
+                                }
+                            ],
+                            "styleRefs": [
+                                "shell.statusPill"
+                            ]
                         }
                     ]
                 }
-            ],
-            "styleRefs": [
-                "shell.statusBar"
             ]
         },
         {
